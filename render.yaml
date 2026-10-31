@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: parakeet-web-ai
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:web
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OLLAMA_URL
+        sync: false
+        # Enter your remote Ollama URL in Render dashboard (e.g., https://your-domain.com or ngrok URL)
+      - key: OLLAMA_MODEL
+        value: qwen2.5:1.5b
+      - key: GROQ_API_KEY
+        sync: false
+        # Optional: Groq API key for cloud Whisper transcription
+      - key: OPENAI_API_KEY
+        sync: false
+        # Optional: OpenAI API key for cloud Whisper transcription

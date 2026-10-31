@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+.env
+.DS_Store
+*.log
+models/*.bin
+bin/*.exe
+bin/*.dll
+bin/*.zip
