@@ -80,14 +80,19 @@ app.post("/api/answer", async (req, res) => {
     return res.status(400).json({ error: "Please provide a valid question." });
   }
 
-  // Set up Server-Sent Events (SSE)
+  // Set up Server-Sent Events (SSE) with anti-buffering headers
   res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders?.();
 
   const controller = new AbortController();
-  req.on("close", () => controller.abort());
+  res.on("close", () => {
+    if (!res.writableEnded) {
+      controller.abort();
+    }
+  });
 
   try {
     const ollamaRes = await fetch(`${OLLAMA_URL}/api/chat`, {
@@ -164,8 +169,10 @@ app.post("/api/answer", async (req, res) => {
 app.post("/api/transcribe", async (req, res) => {
   const apiKey = GROQ_API_KEY || OPENAI_API_KEY;
   if (!apiKey) {
-    return res.status(400).json({
-      error: "No cloud Whisper API key configured. Browser Web Speech API is used instead."
+    return res.json({
+      transcript: "",
+      provider: "web-speech",
+      message: "Speech recognition handled in browser."
     });
   }
 

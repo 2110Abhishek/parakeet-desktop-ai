@@ -26,6 +26,7 @@ export default function App() {
   const timerRef = useRef(null);
   const recognitionRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const transcriptRef = useRef("");
 
   const isDesktop = typeof window !== "undefined" && Boolean(window.desktopAPI);
 
@@ -120,6 +121,7 @@ export default function App() {
               for (let i = 0; i < event.results.length; i++) {
                 full += event.results[i][0].transcript;
               }
+              transcriptRef.current = full;
               setTranscript(full);
             };
             recognitionRef.current = recognition;
@@ -142,8 +144,9 @@ export default function App() {
         streamRef.current = null;
         recognitionRef.current?.stop();
 
+        const currentText = transcriptRef.current;
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        if (!blob.size && !transcript) {
+        if (!blob.size && !currentText) {
           setNotice("No audio was captured. Check your microphone and try again.");
           return;
         }
@@ -155,6 +158,7 @@ export default function App() {
           try {
             const buffer = await blob.arrayBuffer();
             const result = await window.desktopAPI.transcribeAudio(buffer);
+            transcriptRef.current = result.transcript;
             setTranscript(result.transcript);
             setNotice("Transcription complete.");
           } catch (error) {
@@ -166,12 +170,12 @@ export default function App() {
         }
 
         // Web mode: if transcript was already set by Web Speech API, we are done
-        if (transcript.trim()) {
+        if (currentText && currentText.trim()) {
           setNotice("Transcription complete.");
           return;
         }
 
-        // Otherwise try cloud backend transcription
+        // Otherwise try cloud backend transcription if needed
         setProcessing(true);
         setNotice("Transcribing audio on server...");
         try {
@@ -182,10 +186,11 @@ export default function App() {
           });
           const data = await res.json();
           if (data.transcript) {
+            transcriptRef.current = data.transcript;
             setTranscript(data.transcript);
             setNotice("Transcription complete.");
           } else {
-            setNotice(data.error || "Speech recognized was empty.");
+            setNotice(data.message || "Speech transcription ready.");
           }
         } catch (error) {
           setNotice(error.message || "Web transcription failed.");
@@ -309,6 +314,7 @@ export default function App() {
 
   function resetSession() {
     if (recording) stopRecording();
+    transcriptRef.current = "";
     setTranscript("");
     setAnswer("");
     setNotice("Session cleared.");
